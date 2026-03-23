@@ -1,0 +1,4 @@
+interface:
+  display_name: "RAGFlow Dataset And Retrieval"
+  short_description: "Manage datasets, docs, parsing, and retrieval"
+  default_prompt: "Use $ragflow-dataset-ingest to manage RAGFlow datasets, documents, start or stop parsing, check parser status, and retrieve relevant chunks. For document delete or stop actions, require explicit document IDs."
