@@ -1,2 +1,2 @@
 # ragflow-skills
-skills for dataest api
+dataset_skills - skills for dataset api
