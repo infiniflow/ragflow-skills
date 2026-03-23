@@ -1,2 +1,2 @@
 # ragflow-skills
-dataset_skills - skills for dataset api
+dataset_skills/ - skills for dataset api
