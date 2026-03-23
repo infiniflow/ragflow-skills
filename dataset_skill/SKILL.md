@@ -8,84 +8,49 @@ description: "Use for RAGFlow dataset and retrieval tasks: create, list, inspect
 Use only the bundled scripts in `scripts/`.
 Prefer `--json` for script execution so the returned fields can be relayed exactly.
 
-## Trigger Phrases
+## When To Use This Skill
 
-Use this skill when the user intent matches any of these actions, in either Chinese or English, even if the wording is informal.
+Use this skill when the user's intent matches any of these actions, regardless of language or exact wording:
 
-- List datasets
-  Trigger phrases:
-  "list datasets", "show datasets", "show all datasets", "what datasets do I have"
-  "列出数据集", "查看数据集", "显示所有数据集", "我有哪些数据集"
+### Dataset Management
+- **List datasets** - User wants to see what datasets exist, browse all datasets, or check available knowledge bases
+- **Show dataset details** - User wants information about a specific dataset (properties, configuration, statistics)
+- **Create dataset** - User wants to make a new dataset/knowledge base with a specific name or configuration
+- **Update dataset** - User wants to rename a dataset, change its description, or modify its settings
+- **Delete dataset** - User wants to remove one or more datasets entirely
 
-- Show dataset details
-  Trigger phrases:
-  "dataset details", "show dataset info", "inspect dataset", "describe this dataset"
-  "数据集详情", "查看数据集信息", "检查数据集", "显示这个数据集的信息"
+### Document Operations
+- **Upload documents** - User wants to add files (PDF, DOCX, TXT, etc.) to a dataset for ingestion
+- **List documents** - User wants to see what files are in a dataset, check document names or metadata
+- **Update document** - User wants to rename a document or change its metadata/properties
+- **Delete document** - User wants to remove specific files from a dataset
 
-- Create dataset
-  Trigger phrases:
-  "create dataset", "new dataset", "add a dataset"
-  "创建数据集", "新建数据集", "添加数据集"
+### Parsing Control
+- **Start parsing** - User wants to begin or restart the chunking/parsing process for uploaded documents
+- **Stop parsing** - User wants to cancel an ongoing parsing job for specific documents
+- **Check parsing status** - User wants to see parsing progress, which documents are running, completed, or failed
 
-- Update dataset
-  Trigger phrases:
-  "rename dataset", "update dataset", "change dataset description", "modify dataset"
-  "重命名数据集", "更新数据集", "修改数据集描述", "编辑数据集"
+### Knowledge Retrieval
+- **Search/retrieve** - User wants to query the knowledge base, find relevant chunks, or ask questions about ingested content
 
-- Delete dataset
-  Trigger phrases:
-  "delete dataset", "remove dataset", "drop dataset"
-  "删除数据集", "移除数据集", "清理数据集"
+### Model Information
+- **List models** - User wants to see what LLM models are available or configured in RAGFlow
+- **Show model details** - User wants detailed model information or wants models grouped by provider/vendor
 
-- Upload documents
-  Trigger phrases:
-  "upload file", "upload document", "add file to dataset", "import files"
-  "上传文件", "上传文档", "把文件加到数据集", "导入文件"
+**Key principle**: Focus on the user's intent, not exact phrasing. The skill should activate when the user wants to perform any of these operations, whether stated in English, Chinese, or any other language.
 
-- List documents
-  Trigger phrases:
-  "list documents", "show files", "show documents in dataset", "what files are in this dataset"
-  "列出文档", "列出文件", "查看数据集里的文件", "这个数据集里有哪些文件"
+## Output Format Requirements
 
-- Update document
-  Trigger phrases:
-  "rename document", "update document", "edit document metadata"
-  "重命名文档", "更新文档", "修改文档元数据"
+**IMPORTANT**: When returning results to users, you MUST follow the output format specifications defined in reference.md.
 
-- Delete document
-  Trigger phrases:
-  "delete document", "remove file", "delete file from dataset"
-  "删除文档", "删除文件", "从数据集删除文件"
+**Key points**:
 
-- Start parsing
-  Trigger phrases:
-  "parse document", "start parsing", "run parsing", "re-parse document"
-  "解析文档", "开始解析", "执行解析", "重新解析文档"
-
-- Stop parsing
-  Trigger phrases:
-  "stop parsing", "cancel parsing", "stop parse job"
-  "停止解析", "取消解析", "停止解析任务"
-
-- Check parsing status or progress
-  Trigger phrases:
-  "check parsing status", "show progress", "what is still running", "parsing progress"
-  "查看解析状态", "查看进度", "还有哪些在运行", "解析进度"
-
-- Search / retrieve
-  Trigger phrases:
-  "search knowledge base", "search dataset", "retrieve chunks", "find relevant content"
-  "搜索知识库", "搜索数据集", "检索内容", "查找相关内容"
-
-- List models
-  Trigger phrases:
-  "list models", "show models", "available models", "what models are available", "list llms", "show llms", "model providers"
-  "列出模型", "查看模型", "可用模型", "有哪些模型", "列出大模型", "查看大模型", "模型供应商"
-
-- Show model details or provider grouping
-  Trigger phrases:
-  "model details", "show model details", "group models by provider", "list all models including unavailable ones"
-  "模型详情", "查看模型详情", "按供应商查看模型", "列出所有模型包括不可用模型"
+- Use tables for 3+ items with status icons (✅ ❌ 🟡 ⚠️)
+- Use `--json` flag for script execution and relay returned fields exactly
+- Follow response templates (📋 **Datasets**, 🔍 **Results**, 📊 **Details**)
+- Preserve error fields (`api_error`, `message`) without guessing explanations
+- Never fabricate percentage progress - only report what the API returns
+- Always consult reference.md for format specifications. Non-compliance makes responses harder to understand.
 
 ## Workflow
 
