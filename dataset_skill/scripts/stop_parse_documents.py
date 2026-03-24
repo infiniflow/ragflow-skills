@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     phase = "validate"
 
     try:
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         phase = "stop_parse"
         stop_request = stop_parse(args.dataset_id, args.document_ids, base_url=base_url, api_key=api_key)
         phase = "status"

@@ -18,11 +18,9 @@ from common import (
     current_timestamp,
     ensure_success,
     format_json,
-    load_memory_config,
     request_json,
     require_api_key,
     resolve_base_url,
-    resolve_memory_file,
     resolve_runtime_config,
     serialize_script_error,
 )
@@ -199,13 +197,9 @@ def collect_status_payload(
     *,
     base_url: str | None = None,
     api_key: str | None = None,
-    memory_file: str | None = None,
 ) -> dict[str, Any]:
-    memory_config = {}
-    if base_url is None or api_key is None:
-        memory_config = load_memory_config(resolve_memory_file(memory_file))
-    resolved_base_url = base_url or resolve_base_url(memory_config=memory_config)
-    resolved_api_key = api_key or require_api_key(memory_config=memory_config)
+    resolved_base_url = resolve_base_url(base_url)
+    resolved_api_key = require_api_key(api_key)
     raw_documents = _fetch_all_documents(resolved_base_url, resolved_api_key, dataset_id)
     documents = [_normalize_document(raw_doc) for raw_doc in raw_documents]
     return _build_payload(dataset_id, _select_documents(documents, target_ids))
@@ -284,7 +278,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         target_ids = parse_doc_ids(args.doc_ids)
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
 
         payload = collect_status_payload(
             args.dataset_id,

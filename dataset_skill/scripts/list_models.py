@@ -279,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
     try:
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         payload = list_models(
             base_url=base_url,
             api_key=api_key,

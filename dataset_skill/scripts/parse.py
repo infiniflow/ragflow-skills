@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     parse_request: dict[str, object] | None = None
 
     try:
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         parse_request = start_parse(args.dataset_id, args.document_ids, base_url=base_url, api_key=api_key)
         print(format_json(parse_request) if args.json_output else _format_payload(parse_request))
         return 0

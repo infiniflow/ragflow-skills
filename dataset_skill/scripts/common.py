@@ -9,11 +9,9 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
 from typing import Any
 
 HTTP_TIMEOUT = 30
-DEFAULT_MEMORY_FILE = Path.home() / ".codex" / "memories" / "ragflow_credentials.json"
 
 
 class ScriptError(Exception):
@@ -65,69 +63,15 @@ def configure_stdio_utf8() -> None:
             continue
 
 
-def resolve_memory_file(cli_memory_file: str | None = None) -> Path:
-    if cli_memory_file:
-        return Path(cli_memory_file).expanduser()
-    return DEFAULT_MEMORY_FILE
-
-
-def load_memory_config(memory_file: str | Path | None = None) -> dict[str, Any]:
-    path = resolve_memory_file(str(memory_file) if memory_file is not None else None)
-    if not path.is_file():
-        return {}
-
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise ConfigError(f"Failed to read memory file {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
-        raise ConfigError(f"Memory file {path} must contain a JSON object.") from exc
-
-    if not isinstance(payload, dict):
-        raise ConfigError(f"Memory file {path} must contain a JSON object.")
-    return payload
-
-
-def save_memory_config(memory_config: dict[str, Any], memory_file: str | Path | None = None) -> Path:
-    path = resolve_memory_file(str(memory_file) if memory_file is not None else None)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        path.write_text(json.dumps(memory_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    except OSError as exc:
-        raise ConfigError(f"Failed to write memory file {path}: {exc}") from exc
-    return path
-
-
 def add_runtime_config_arguments(parser: Any) -> None:
     parser.add_argument(
         "--base-url",
-        help="Absolute base URL for the RAGFlow server. If omitted, read from --memory-file or prompt interactively.",
+        help="Absolute base URL for the RAGFlow server. If omitted, prompt interactively.",
     )
     parser.add_argument(
-        "--api-key-file",
-        help="Path to a file containing the RAGFlow API key. Safer than putting the key on the command line.",
+        "--api-key",
+        help="RAGFlow API key. If omitted, prompt interactively.",
     )
-    parser.add_argument(
-        "--memory-file",
-        help=f"JSON memory file used to read cached credentials (default: {DEFAULT_MEMORY_FILE}).",
-    )
-    parser.add_argument(
-        "--save-to-memory",
-        action="store_true",
-        help="Save the resolved base URL and API key back to --memory-file after prompting or loading them.",
-    )
-
-
-def _read_api_key_file(api_key_file: str) -> str:
-    path = Path(api_key_file).expanduser()
-    try:
-        api_key = path.read_text(encoding="utf-8").strip()
-    except OSError as exc:
-        raise ConfigError(f"Failed to read API key file {path}: {exc}") from exc
-    if not api_key:
-        raise ConfigError(f"API key file {path} is empty.")
-    return api_key
-
 
 def _prompt_non_empty(prompt: str, *, secret: bool = False) -> str:
     while True:
@@ -138,14 +82,8 @@ def _prompt_non_empty(prompt: str, *, secret: bool = False) -> str:
         print("Value must not be empty.", file=sys.stderr)
 
 
-def resolve_base_url(cli_base_url: str | None = None, *, memory_config: dict[str, Any] | None = None) -> str:
-    raw_value = cli_base_url
-    if raw_value is None and memory_config:
-        memory_base_url = memory_config.get("base_url")
-        if memory_base_url is not None:
-            raw_value = str(memory_base_url)
-
-    base_url = (raw_value or "").strip()
+def resolve_base_url(cli_base_url: str | None = None) -> str:
+    base_url = (cli_base_url or "").strip()
     if not base_url:
         base_url = _prompt_non_empty("RAGFlow base URL: ")
 
@@ -155,86 +93,19 @@ def resolve_base_url(cli_base_url: str | None = None, *, memory_config: dict[str
     return base_url.rstrip("/")
 
 
-def require_api_key(
-    *,
-    api_key_file: str | None = None,
-    memory_config: dict[str, Any] | None = None,
-) -> str:
-    api_key = ""
-    if api_key_file:
-        api_key = _read_api_key_file(api_key_file)
-    elif memory_config and memory_config.get("api_key") is not None:
-        api_key = str(memory_config.get("api_key") or "").strip()
-
+def require_api_key(api_key: str | None = None) -> str:
+    api_key = (api_key or "").strip()
     if not api_key:
         api_key = _prompt_non_empty("RAGFlow API key: ", secret=True)
-
     if not api_key:
         raise ConfigError("RAGFlow API key is required.")
     return api_key
 
 
-def resolve_runtime_config(args: Any) -> tuple[str, str, dict[str, Any]]:
-    memory_file = getattr(args, "memory_file", None)
-    memory_config = load_memory_config(memory_file)
-    base_url = resolve_base_url(getattr(args, "base_url", None), memory_config=memory_config)
-    api_key = require_api_key(
-        api_key_file=getattr(args, "api_key_file", None),
-        memory_config=memory_config,
-    )
-
-    if getattr(args, "save_to_memory", False):
-        updated_config = dict(memory_config)
-        updated_config["base_url"] = base_url
-        updated_config["api_key"] = api_key
-        save_memory_config(updated_config, memory_file)
-        memory_config = updated_config
-
-    return base_url, api_key, memory_config
-
-
-def parse_dataset_ids_config(raw_value: Any, *, label: str) -> list[str]:
-    if raw_value is None:
-        return []
-
-    if isinstance(raw_value, list):
-        values: list[str] = []
-        seen: set[str] = set()
-        for item in raw_value:
-            value = str(item).strip()
-            if not value or value in seen:
-                continue
-            seen.add(value)
-            values.append(value)
-        if not values:
-            raise ConfigError(f"{label} must include at least one dataset ID when it is set.")
-        return values
-
-    if isinstance(raw_value, str):
-        text = raw_value.strip()
-        if not text:
-            return []
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, list):
-            return parse_dataset_ids_config(parsed, label=label)
-        if isinstance(parsed, str):
-            return parse_dataset_ids_config(parsed.split(","), label=label)
-        values = [item.strip() for item in text.split(",") if item.strip()]
-        deduped: list[str] = []
-        seen: set[str] = set()
-        for value in values:
-            if value in seen:
-                continue
-            seen.add(value)
-            deduped.append(value)
-        if not deduped:
-            raise ConfigError(f"{label} must include at least one dataset ID when it is set.")
-        return deduped
-
-    raise ConfigError(f"{label} must be a JSON array or a comma-separated string.")
+def resolve_runtime_config(args: Any) -> tuple[str, str]:
+    base_url = resolve_base_url(getattr(args, "base_url", None))
+    api_key = require_api_key(getattr(args, "api_key", None))
+    return base_url, api_key
 
 
 def decode_json_response(body: bytes) -> dict[str, Any]:

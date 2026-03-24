@@ -104,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
     try:
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         payload = request_json(
             f"{base_url}/api/v1/datasets",
             api_key,

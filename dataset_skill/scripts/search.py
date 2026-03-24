@@ -14,7 +14,6 @@ from common import (
     current_timestamp,
     ensure_success,
     format_json,
-    parse_dataset_ids_config,
     request_json,
     resolve_runtime_config,
 )
@@ -84,7 +83,7 @@ def _parse_ids(raw_value: str, *, label: str) -> list[str]:
     return values
 
 
-def _resolve_dataset_ids(args: argparse.Namespace, memory_config: dict[str, Any]) -> list[str]:
+def _resolve_dataset_ids(args: argparse.Namespace) -> list[str]:
     if args.dataset_ids:
         return _parse_ids(args.dataset_ids, label="--dataset-ids")
     if args.dataset_id:
@@ -92,7 +91,7 @@ def _resolve_dataset_ids(args: argparse.Namespace, memory_config: dict[str, Any]
         if not dataset_id:
             raise ConfigError("dataset_id must not be empty.")
         return [dataset_id]
-    return parse_dataset_ids_config(memory_config.get("dataset_ids"), label="memory.dataset_ids")
+    return []
 
 
 def _resolve_kb_id(args: argparse.Namespace, dataset_ids: list[str]) -> str:
@@ -146,7 +145,7 @@ def _extract_chunks(payload: dict[str, Any]) -> list[dict[str, Any]]:
     raise DataError("Retrieval response data must be an object or array.")
 
 
-def search(args: argparse.Namespace, *, base_url: str, api_key: str, memory_config: dict[str, Any]) -> dict[str, Any]:
+def search(args: argparse.Namespace, *, base_url: str, api_key: str) -> dict[str, Any]:
     if args.top_k <= 0:
         raise ConfigError("--top-k must be greater than 0.")
     if args.page <= 0:
@@ -157,7 +156,7 @@ def search(args: argparse.Namespace, *, base_url: str, api_key: str, memory_conf
     if args.vector_weight is not None:
         _validate_range("--vector-weight", args.vector_weight)
 
-    dataset_ids = _resolve_dataset_ids(args, memory_config)
+    dataset_ids = _resolve_dataset_ids(args)
     doc_ids = _parse_ids(args.doc_ids, label="--doc-ids") if args.doc_ids else []
 
     body: dict[str, Any] = {
@@ -268,8 +267,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
     try:
-        base_url, api_key, memory_config = resolve_runtime_config(args)
-        payload = search(args, base_url=base_url, api_key=api_key, memory_config=memory_config)
+        base_url, api_key = resolve_runtime_config(args)
+        payload = search(args, base_url=base_url, api_key=api_key)
         print(format_json(payload) if args.json_output else _format_text(payload))
         return 0
     except ScriptError as exc:

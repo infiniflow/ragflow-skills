@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     configure_stdio_utf8()
     try:
         args = _parse_args(argv)
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         payload = _build_payload(args)
         response = request_json(
             _build_url(base_url, args.dataset_id, args.document_id),

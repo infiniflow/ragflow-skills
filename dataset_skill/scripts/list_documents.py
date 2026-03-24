@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         _validate_positive("--page", args.page)
         _validate_positive("--page-size", args.page_size)
-        base_url, api_key, _memory_config = resolve_runtime_config(args)
+        base_url, api_key = resolve_runtime_config(args)
         payload = request_json(_build_documents_url(base_url, args), api_key)
         normalized = _normalize_payload(payload)
 
