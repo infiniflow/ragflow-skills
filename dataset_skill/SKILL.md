@@ -1,6 +1,13 @@
 ---
 name: ragflow-dataset-ingest
 description: "Use for RAGFlow dataset tasks: create, list, inspect, update, or delete datasets; upload, list, update, or delete documents; start or stop parsing; check parse status; retrieve chunks with `search.py`; and list configured models."
+metadata:
+  required_env_vars:
+    - name: RAGFLOW_API_URL
+      description: Trusted base URL for the target RAGFlow server.
+    - name: RAGFLOW_API_KEY
+      description: Bearer API key for the target RAGFlow server.
+      primary_credential: true
 ---
 
 # RAGFlow Dataset And Retrieval
@@ -66,4 +73,5 @@ python scripts/list_models.py --json
 
 ## Credentials
 
-This skill requires a RAGFLOW_API_KEY to be configured in OpenClaw, and a RAGFlow base URL to be provided at runtime.
+Declare `RAGFLOW_API_KEY` and `RAGFLOW_API_URL` in OpenClaw so the registry can report the runtime requirements correctly.
+When running the bundled scripts directly, pass the same values with `--api-key` and `--base-url`, or provide them interactively when prompted.
