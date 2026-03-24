@@ -73,5 +73,10 @@ python scripts/list_models.py --json
 
 ## Credentials
 
-Declare `RAGFLOW_API_KEY` and `RAGFLOW_API_URL` in OpenClaw so the registry can report the runtime requirements correctly.
-When running the bundled scripts directly, pass the same values with `--api-key` and `--base-url`, or provide them interactively when prompted.
+`RAGFLOW_API_URL` and `RAGFLOW_API_KEY` are required runtime prerequisites for this skill.
+Set both environment variables before running any bundled script.
+
+```bash
+export RAGFLOW_API_URL=http://127.0.0.1:9380
+export RAGFLOW_API_KEY=your-ragflow-api-key
+```

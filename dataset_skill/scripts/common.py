@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import getpass
 import io
 import json
+import os
 import sys
 import urllib.error
 import urllib.parse
@@ -12,6 +12,8 @@ import urllib.request
 from typing import Any
 
 HTTP_TIMEOUT = 30
+RAGFLOW_API_URL_ENV = "RAGFLOW_API_URL"
+RAGFLOW_API_KEY_ENV = "RAGFLOW_API_KEY"
 
 
 class ScriptError(Exception):
@@ -64,41 +66,34 @@ def configure_stdio_utf8() -> None:
 
 
 def add_runtime_config_arguments(parser: Any) -> None:
-    parser.add_argument(
-        "--base-url",
-        help="Absolute base URL for the RAGFlow server. If omitted, prompt interactively.",
+    requirement = (
+        f"Runtime prerequisites: set {RAGFLOW_API_URL_ENV} and {RAGFLOW_API_KEY_ENV} "
+        "in the environment before running this script."
     )
-    parser.add_argument(
-        "--api-key",
-        help="RAGFlow API key. If omitted, prompt interactively.",
-    )
+    existing_epilog = getattr(parser, "epilog", None)
+    parser.epilog = f"{existing_epilog}\n\n{requirement}" if existing_epilog else requirement
 
-def _prompt_non_empty(prompt: str, *, secret: bool = False) -> str:
-    while True:
-        value = getpass.getpass(prompt) if secret else input(prompt)
-        value = value.strip()
-        if value:
-            return value
-        print("Value must not be empty.", file=sys.stderr)
+
+def _require_env_var(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    raise ConfigError(f"{name} environment variable is required.")
 
 
 def resolve_base_url(cli_base_url: str | None = None) -> str:
-    base_url = (cli_base_url or "").strip()
-    if not base_url:
-        base_url = _prompt_non_empty("RAGFlow base URL: ")
+    base_url = (cli_base_url or "").strip() or _require_env_var(RAGFLOW_API_URL_ENV)
 
     parsed = urllib.parse.urlsplit(base_url)
     if not parsed.scheme or not parsed.netloc:
-        raise ConfigError("Invalid base URL. Use an absolute URL such as http://127.0.0.1:9380.")
+        raise ConfigError(
+            f"Invalid {RAGFLOW_API_URL_ENV}. Use an absolute URL such as http://127.0.0.1:9380."
+        )
     return base_url.rstrip("/")
 
 
 def require_api_key(api_key: str | None = None) -> str:
-    api_key = (api_key or "").strip()
-    if not api_key:
-        api_key = _prompt_non_empty("RAGFlow API key: ", secret=True)
-    if not api_key:
-        raise ConfigError("RAGFlow API key is required.")
+    api_key = (api_key or "").strip() or _require_env_var(RAGFLOW_API_KEY_ENV)
     return api_key
 
 
