@@ -334,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             return _err(f"Unknown sessions subcommand: {sc}")
 
-        if args.command == "message":
+        if args.command == "message": 
             payload = send_message(
                 args.assistant_id,
                 args.question,
