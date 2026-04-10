@@ -137,8 +137,8 @@ def _print_summary(payload: dict[str, Any]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     configure_stdio_utf8()
+    args = _parse_args(argv)
     try:
-        args = _parse_args(argv)
         base_url, api_key = resolve_runtime_config(args)
         payload = _build_payload(args)
         response = request_json(
@@ -150,7 +150,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         normalized = _normalize_payload(response)
     except ScriptError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        if args.json_output:
+            print(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2))
+        else:
+            print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     if args.json_output:

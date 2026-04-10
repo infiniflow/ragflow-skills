@@ -93,14 +93,19 @@ def list_datasets(*, base_url: str, api_key: str) -> dict[str, Any]:
 
 
 def dataset_info(dataset_id: str, *, base_url: str, api_key: str) -> dict[str, Any]:
-    payload = list_datasets(base_url=base_url, api_key=api_key)
-    for dataset in payload["datasets"]:
-        if dataset.get("id") == dataset_id:
-            return {
-                "checked_at": current_timestamp(),
-                "dataset": dataset,
-            }
-    raise DataError(f"Dataset not found: {dataset_id}")
+    import urllib.parse
+    encoded_id = urllib.parse.quote(dataset_id, safe="")
+    query = urllib.parse.urlencode({"id": dataset_id})
+    payload = ensure_success(request_json(f"{base_url}/api/v1/datasets?{query}", api_key))
+    datasets = payload.get("data")
+    if not isinstance(datasets, list):
+        raise DataError("Dataset info response missing data array.")
+    if not datasets:
+        raise DataError(f"Dataset not found: {dataset_id}")
+    return {
+        "checked_at": current_timestamp(),
+        "dataset": _normalize_dataset(datasets[0]),
+    }
 
 
 def _build_create_payload(args: argparse.Namespace) -> dict[str, Any]:
