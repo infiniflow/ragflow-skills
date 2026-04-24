@@ -9,6 +9,7 @@ Usage:
   python3 scripts/chat.py sessions list ASSISTANT_ID --json
   python3 scripts/chat.py sessions create ASSISTANT_ID --name "My Session" --json
   python3 scripts/chat.py sessions delete ASSISTANT_ID --ids SID1,SID2 --json
+  python3 scripts/chat.py sessions history ASSISTANT_ID SESSION_ID --json
 
   # Send a message (non-streaming)
   python3 scripts/chat.py message ASSISTANT_ID "Your question here" --json
@@ -68,6 +69,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         required=True,
         help="Comma-separated session IDs to delete",
     )
+
+    sess_history = sess_sub.add_parser("history", help="Show conversation history for a session", parents=[global_parser])
+    sess_history.add_argument("assistant_id", help="Assistant ID")
+    sess_history.add_argument("session_id", help="Session ID")
 
     # --- message subcommand ---
     msg_p = subparsers.add_parser("message", help="Send a chat message", parents=[global_parser])
@@ -170,6 +175,33 @@ def delete_sessions(assistant_id: str, raw_ids: str, *, base_url: str, api_key: 
         "assistant_id": assistant_id,
         "session_ids": session_ids,
         "message": payload.get("message", ""),
+    }
+
+
+def get_session_history(assistant_id: str, session_id: str, *, base_url: str, api_key: str) -> dict[str, Any]:
+    import urllib.parse
+    query = urllib.parse.urlencode({"id": session_id})
+    payload = ensure_success(
+        request_json(f"{base_url}/api/v1/chats/{assistant_id}/sessions?{query}", api_key)
+    )
+    raw = payload.get("data")
+    if not isinstance(raw, list) or not raw:
+        raise DataError("Session not found or no data returned.")
+    session = raw[0]
+    messages = session.get("messages") or []
+    normalized = [
+        {"role": m.get("role", ""), "content": m.get("content", "")}
+        for m in messages
+        if isinstance(m, dict)
+    ]
+    return {
+        "checked_at": current_timestamp(),
+        "assistant_id": assistant_id,
+        "session_id": session_id,
+        "session_name": session.get("name") or "",
+        "created_at": session.get("create_date") or "",
+        "message_count": len(normalized),
+        "messages": normalized,
     }
 
 
@@ -279,6 +311,20 @@ def _format_session_delete(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_session_history(payload: dict[str, Any]) -> str:
+    lines = [
+        f"Checked at: {payload['checked_at']}",
+        f"Session: {payload['session_id']}",
+        f"Name: {payload['session_name'] or 'unknown'}",
+        f"Created at: {payload['created_at'] or 'unknown'}",
+        f"Messages: {payload['message_count']}",
+    ]
+    for msg in payload["messages"]:
+        role_label = "用户" if msg["role"] == "user" else "助手"
+        lines.extend(["", f"[{role_label}]", msg["content"]])
+    return "\n".join(lines)
+
+
 def _format_message(payload: dict[str, Any]) -> str:
     lines = [
         f"Asked at: {payload['asked_at']}",
@@ -332,9 +378,13 @@ def main(argv: list[str] | None = None) -> int:
                 payload = delete_sessions(args.assistant_id, args.ids, base_url=base_url, api_key=api_key)
                 print(format_json(payload) if args.json_output else _format_session_delete(payload))
                 return 0
+            if sc == "history":
+                payload = get_session_history(args.assistant_id, args.session_id, base_url=base_url, api_key=api_key)
+                print(format_json(payload) if args.json_output else _format_session_history(payload))
+                return 0
             return _err(f"Unknown sessions subcommand: {sc}")
 
-        if args.command == "message": 
+        if args.command == "message":
             payload = send_message(
                 args.assistant_id,
                 args.question,

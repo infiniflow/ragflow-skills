@@ -101,6 +101,7 @@ python3 scripts/chat.py message ASSISTANT_ID "Follow-up question" --session-id S
 python3 scripts/chat.py sessions list ASSISTANT_ID --json
 python3 scripts/chat.py sessions create ASSISTANT_ID --name "My Session" --json
 python3 scripts/chat.py sessions delete ASSISTANT_ID --ids SID1,SID2 --json
+python3 scripts/chat.py sessions history ASSISTANT_ID SESSION_ID --json
 ```
 
 ### Agent Commands
