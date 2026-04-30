@@ -6,12 +6,15 @@ import io
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
 
 HTTP_TIMEOUT = 30
+HTTP_MAX_RETRIES = 3
+HTTP_RETRY_DELAY = 1.0  # seconds, doubled on each retry
 RAGFLOW_API_URL_ENV = "RAGFLOW_API_URL"
 RAGFLOW_API_KEY_ENV = "RAGFLOW_API_KEY"
 
@@ -170,6 +173,7 @@ def request_json(
     body: bytes | None = None,
     content_type: str | None = None,
     accept: str = "application/json",
+    max_retries: int = HTTP_MAX_RETRIES,
 ) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {api_key}"}
     if accept:
@@ -177,34 +181,43 @@ def request_json(
     if content_type:
         headers["Content-Type"] = content_type
 
-    request_obj = urllib.request.Request(url, headers=headers, data=body, method=method)
-
-    try:
-        with urllib.request.urlopen(request_obj, timeout=HTTP_TIMEOUT) as response:
-            return decode_json_response(response.read())
-    except urllib.error.HTTPError as exc:
-        body_bytes = exc.read()
-        response_payload = decode_json_body(body_bytes)
-        response_text = decode_response_text(body_bytes)
-        message = extract_error_message(body_bytes)
-        if message:
+    last_exc: Exception | None = None
+    for attempt in range(max(1, max_retries)):
+        request_obj = urllib.request.Request(url, headers=headers, data=body, method=method)
+        try:
+            with urllib.request.urlopen(request_obj, timeout=HTTP_TIMEOUT) as response:
+                return decode_json_response(response.read())
+        except urllib.error.HTTPError as exc:
+            # HTTP errors are application-level; do not retry.
+            body_bytes = exc.read()
+            response_payload = decode_json_body(body_bytes)
+            response_text = decode_response_text(body_bytes)
+            message = extract_error_message(body_bytes)
+            if message:
+                raise ApiError(
+                    message,
+                    http_status=exc.code,
+                    api_code=response_payload.get("code") if isinstance(response_payload, dict) else None,
+                    response_payload=response_payload,
+                    response_body=response_text,
+                ) from None
             raise ApiError(
-                message,
+                f"HTTP request failed with status {exc.code}.",
                 http_status=exc.code,
                 api_code=response_payload.get("code") if isinstance(response_payload, dict) else None,
                 response_payload=response_payload,
                 response_body=response_text,
             ) from None
-        raise ApiError(
-            f"HTTP request failed with status {exc.code}.",
-            http_status=exc.code,
-            api_code=response_payload.get("code") if isinstance(response_payload, dict) else None,
-            response_payload=response_payload,
-            response_body=response_text,
-        ) from None
-    except urllib.error.URLError as exc:
-        reason = getattr(exc, "reason", exc)
-        raise ApiError(f"HTTP request failed: {reason}") from None
+        except urllib.error.URLError as exc:
+            last_exc = exc
+            if attempt < max_retries - 1:
+                time.sleep(HTTP_RETRY_DELAY * (2 ** attempt))
+                continue
+            reason = getattr(exc, "reason", exc)
+            raise ApiError(f"HTTP request failed after {max_retries} attempt(s): {reason}") from None
+
+    # Should not reach here, but satisfy the type checker.
+    raise ApiError(f"HTTP request failed after {max_retries} attempt(s).")
 
 
 def ensure_success(payload: dict[str, Any]) -> dict[str, Any]:

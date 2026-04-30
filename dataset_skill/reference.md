@@ -80,3 +80,45 @@ Apply this reference to all user-facing output for this skill.
 **Chunks:** 53
 ```
 
+### Chat Assistants (3+ items)
+```markdown
+🤖 **Chat Assistants** (7 total)
+
+| Name | ID | LLM | Datasets |
+|------|----|-----|---------|
+| QA知识库-测试 | 010a...1237 | qwen-max@... | kb-id-1 |
+```
+
+### Chat Assistant Details
+```markdown
+🤖 **Assistant Details**
+
+**Name:** QA知识库-测试
+**ID:** `010aff04347e11f1b93f033b90d81237`
+**LLM:** qwen-max@Tongyi-Qianwen
+**Datasets:** `bff4b898...`, `a1b2c3d4...`
+**Created:** 2026-04-01T10:00:00
+```
+
+### Sessions (3+ items)
+```markdown
+💬 **Sessions** (5 total, page 1/2)
+
+| Name | ID | Created |
+|------|----|---------|
+| My Session | sess-abc... | 2026-04-10 |
+```
+
+### Chat Answer
+```markdown
+💬 **Answer** (session: `sess-abc123`)
+
+{answer verbatim}
+
+📎 **References** (2)
+
+| # | Document | Similarity | Excerpt |
+|---|----------|------------|---------|
+| 1 | doc.pdf | 87% | excerpt... |
+```
+
